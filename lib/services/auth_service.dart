@@ -60,4 +60,22 @@ class AuthService {
     data.remove('uid'); // Don't update the uid field
     await _db.collection('users').doc(user.uid).update(data);
   }
+
+  Future<void> updateEmail(String newEmail, String password) async {
+    final user = _auth.currentUser;
+    if (user == null) throw Exception('No user signed in');
+
+    // Re-authenticate user before changing email
+    final credential = EmailAuthProvider.credential(
+      email: user.email!,
+      password: password,
+    );
+    await user.reauthenticateWithCredential(credential);
+
+    // Update email in Firebase Auth
+    await user.verifyBeforeUpdateEmail(newEmail);
+
+    // Update email in Firestore
+    await _db.collection('users').doc(user.uid).update({'email': newEmail});
+  }
 }
