@@ -266,25 +266,25 @@ class _EditBookScreenState extends State<EditBookScreen> {
                         await booksProv.updateBook(_book!.id, updates);
                         if (_imageFile != null) {
                           try {
-                            print('Starting image upload for book: ${_book!.id}');
+                            debugPrint('Starting image upload for book: ${_book!.id}');
                             final url = await storage.uploadBookCover(
                                 _book!.id, _imageFile!);
-                            print('Image uploaded successfully. URL: $url');
+                            debugPrint('Image uploaded successfully. URL: $url');
                             
                             if (url.isEmpty) {
                               throw Exception('Upload succeeded but URL is empty');
                             }
                             
-                            print('Updating book with cover URL: $url');
+                            debugPrint('Updating book with cover URL: $url');
                             await booksProv.updateBook(
                                 _book!.id, {'coverUrl': url});
-                            print('Book updated successfully with cover URL');
+                            debugPrint('Book updated successfully with cover URL');
                             
                             // Small delay to ensure Firestore has processed the update
                             await Future.delayed(Duration(milliseconds: 300));
                           } catch (uploadError) {
                             // Book was updated but image upload failed
-                            print('Image upload/update failed: $uploadError');
+                            debugPrint('Image upload/update failed: $uploadError');
                             if (mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(

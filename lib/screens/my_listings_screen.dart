@@ -5,8 +5,6 @@ import '../providers/auth_provider.dart';
 import '../providers/swaps_provider.dart';
 import '../widgets/book_tile.dart';
 import '../models/book.dart';
-import '../models/swap_offer.dart';
-import 'post_book_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class MyListingsScreen extends StatefulWidget {

@@ -192,12 +192,134 @@ lib/
     └── bottom_nav.dart
 ```
 
+## 🏗️ Architecture
+
+### Architecture Diagram
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      Presentation Layer                      │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐     │
+│  │   Screens    │  │   Widgets    │  │  Navigation  │     │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘     │
+│         │                 │                  │              │
+│         └─────────────────┴──────────────────┘            │
+│                            │                                │
+└────────────────────────────┼────────────────────────────────┘
+                             │
+┌────────────────────────────┼────────────────────────────────┐
+│                      Domain Layer                           │
+│                            │                                │
+│         ┌──────────────────▼──────────────────┐            │
+│         │         State Management             │            │
+│         │  (Provider - ChangeNotifier)        │            │
+│         │  ┌──────────────────────────────┐   │            │
+│         │  │ AuthProvider                 │   │            │
+│         │  │ BooksProvider                │   │            │
+│         │  │ SwapsProvider                 │   │            │
+│         │  │ ChatsProvider                 │   │            │
+│         │  │ ThemeProvider                 │   │            │
+│         │  └──────────────────────────────┘   │            │
+│         └──────────────────┬──────────────────┘            │
+│                            │                                │
+└────────────────────────────┼────────────────────────────────┘
+                             │
+┌────────────────────────────┼────────────────────────────────┐
+│                       Data Layer                            │
+│                            │                                │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐     │
+│  │   Models     │  │  Services    │  │  Firebase    │     │
+│  │              │  │              │  │              │     │
+│  │ - Book       │  │ - AuthService│  │ - Firestore  │     │
+│  │ - AppUser    │  │ - Firestore  │  │ - Storage    │     │
+│  │ - SwapOffer  │  │   Service    │  │ - Auth       │     │
+│  │ - Message    │  │ - Storage    │  │              │     │
+│  │              │  │   Service    │  │              │     │
+│  └──────────────┘  └──────────────┘  └──────────────┘     │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### State Management with Provider
+
+**Provider** is a state management solution that uses the InheritedWidget pattern to share state across the widget tree. Here's how it works in this app:
+
+#### How Provider Works
+
+1. **Setup**: Providers are registered at the app root using `MultiProvider`:
+   ```dart
+   MultiProvider(
+     providers: [
+       ChangeNotifierProvider(create: (_) => AuthProvider()),
+       ChangeNotifierProvider(create: (_) => BooksProvider()),
+       // ... other providers
+     ],
+   )
+   ```
+
+2. **State Classes**: Each provider extends `ChangeNotifier`:
+   ```dart
+   class BooksProvider extends ChangeNotifier {
+     List<Book> browseBooks = [];
+     
+     // When data changes, call notifyListeners()
+     void updateBooks(List<Book> books) {
+       browseBooks = books;
+       notifyListeners(); // Notifies all listening widgets
+     }
+   }
+   ```
+
+3. **Consuming State**: Widgets access state using `Provider.of<T>` or `Consumer<T>`:
+   ```dart
+   // Method 1: Provider.of (rebuilds when state changes)
+   final books = Provider.of<BooksProvider>(context);
+   
+   // Method 2: Consumer (rebuilds only the Consumer widget)
+   Consumer<BooksProvider>(
+     builder: (context, books, child) {
+       return Text('Books: ${books.browseBooks.length}');
+     },
+   )
+   ```
+
+4. **Real-time Updates**: Firestore streams automatically update state:
+   ```dart
+   BooksProvider() {
+     _fs.browseBooksStream().listen((list) {
+       browseBooks = list;
+       notifyListeners(); // UI updates automatically
+     });
+   }
+   ```
+
+#### State Flow in BookSwap App
+
+1. **User Action** → Widget calls provider method
+2. **Provider** → Calls service method
+3. **Service** → Updates Firebase (Firestore/Storage)
+4. **Firebase** → Sends real-time update via stream
+5. **Provider** → Receives update, calls `notifyListeners()`
+6. **Widgets** → Automatically rebuild with new data
+
+**Example Flow (Creating a Book)**:
+```
+User taps "Post" 
+  → PostBookScreen calls booksProv.createBook()
+  → BooksProvider calls firestoreService.createBook()
+  → FirestoreService writes to Firebase
+  → Firestore stream emits new book
+  → BooksProvider.browseBooksStream() receives update
+  → BooksProvider calls notifyListeners()
+  → BrowseScreen automatically shows new book
+```
+
 ## 🎯 Key Features Breakdown
 
 ### State Management
 - Uses **Provider** pattern for reactive state management
 - Real-time updates via Firestore streams
 - Proper memory management with stream subscriptions
+- No global setState calls (all state managed through providers)
 
 ### Real-time Synchronization
 - Books, swaps, and messages update instantly across devices

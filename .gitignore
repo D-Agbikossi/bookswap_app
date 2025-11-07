@@ -43,3 +43,21 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Firebase configuration files (sensitive)
+**/google-services.json
+**/GoogleService-Info.plist
+# Note: firebase_options.dart is generated and can be committed
+# but ensure no API keys are hardcoded
+
+# Environment and secrets
+.env
+.env.local
+*.key
+*.pem
+secrets.json
+
+# IDE specific
+.vscode/settings.json
+.idea/workspace.xml
+.idea/tasks.xml

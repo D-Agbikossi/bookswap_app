@@ -7,7 +7,6 @@ import 'package:provider/provider.dart';
 import '../providers/books_provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/storage_service.dart';
-import '../models/book.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class PostBookScreen extends StatefulWidget {
@@ -213,23 +212,23 @@ class _PostBookScreenState extends State<PostBookScreen> {
                             final id = await booksProv.createBook(bookData);
                             if (_imageFile != null) {
                               try {
-                                print('Starting image upload for book: $id');
+                                debugPrint('Starting image upload for book: $id');
                                 final url = await storage.uploadBookCover(id, _imageFile!);
-                                print('Image uploaded successfully. URL: $url');
+                                debugPrint('Image uploaded successfully. URL: $url');
                                 
                                 if (url.isEmpty) {
                                   throw Exception('Upload succeeded but URL is empty');
                                 }
                                 
-                                print('Updating book with cover URL: $url');
+                                debugPrint('Updating book with cover URL: $url');
                                 await booksProv.updateBook(id, {'coverUrl': url});
-                                print('Book updated successfully with cover URL');
+                                debugPrint('Book updated successfully with cover URL');
                                 
                                 // Small delay to ensure Firestore has processed the update
                                 await Future.delayed(Duration(milliseconds: 300));
                               } catch (uploadError) {
                                 // Book was created but image upload failed
-                                print('Image upload/update failed: $uploadError');
+                                debugPrint('Image upload/update failed: $uploadError');
                                 if (mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(

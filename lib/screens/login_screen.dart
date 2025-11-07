@@ -46,7 +46,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
   String _getErrorMessage(dynamic error) {
     final errorString = error.toString().toLowerCase();
-    if (errorString.contains('user-not-found')) {
+    if (errorString.contains('email-not-verified')) {
+      return 'Please verify your email before logging in. Check your inbox for the verification link.';
+    } else if (errorString.contains('user-not-found')) {
       return 'No account found with this email. Please sign up.';
     } else if (errorString.contains('wrong-password')) {
       return 'Incorrect password. Please try again.';

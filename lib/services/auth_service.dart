@@ -35,6 +35,13 @@ class AuthService {
       email: email,
       password: password,
     );
+    
+    // Enforce email verification - user cannot log in until verified
+    if (cred.user != null && !cred.user!.emailVerified) {
+      await _auth.signOut(); // Sign out the unverified user
+      throw Exception('email-not-verified');
+    }
+    
     return cred;
   }
 

@@ -4,7 +4,6 @@ import '../providers/chats_provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/swaps_provider.dart';
 import '../providers/books_provider.dart';
-import '../models/swap_offer.dart';
 import '../models/book.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -95,7 +94,6 @@ class _ChatsScreenState extends State<ChatsScreen> {
                     ),
                   );
                   final isSender = swap.senderId == userId;
-                  final otherUserId = isSender ? swap.receiverId : swap.senderId;
 
                   return ListTile(
                     leading: book.coverUrl.isNotEmpty
