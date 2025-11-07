@@ -1,5 +1,7 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../models/book.dart';
@@ -16,7 +18,7 @@ class _EditBookScreenState extends State<EditBookScreen> {
   late final TextEditingController _title;
   late final TextEditingController _author;
   late String condition;
-  File? _file;
+  XFile? _imageFile;
   bool loading = false;
   final ImagePicker _picker = ImagePicker();
   Book? _book;
@@ -52,12 +54,39 @@ class _EditBookScreenState extends State<EditBookScreen> {
     super.dispose();
   }
 
-  Future pickImage() async {
-    final XFile? x = await _picker.pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 70,
-    );
-    if (x != null) setState(() => _file = File(x.path));
+  Future<void> pickImage() async {
+    try {
+      final XFile? pickedFile = await _picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 70,
+        maxWidth: 1920,
+        maxHeight: 1080,
+      );
+      if (pickedFile != null) {
+        setState(() {
+          _imageFile = pickedFile;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.error_outline, color: Colors.white),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Failed to pick image: ${e.toString()}',
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -136,10 +165,31 @@ class _EditBookScreenState extends State<EditBookScreen> {
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 8),
-            _file != null
+            _imageFile != null
                 ? ClipRRect(
                     borderRadius: BorderRadius.circular(12),
-                    child: Image.file(_file!, height: 200, fit: BoxFit.cover),
+                    child: kIsWeb
+                        ? FutureBuilder<Uint8List>(
+                            future: _imageFile!.readAsBytes(),
+                            builder: (context, snapshot) {
+                              if (snapshot.hasData) {
+                                return Image.memory(
+                                  snapshot.data!,
+                                  height: 200,
+                                  fit: BoxFit.cover,
+                                );
+                              }
+                              return Container(
+                                height: 200,
+                                child: Center(child: CircularProgressIndicator()),
+                              );
+                            },
+                          )
+                        : Image.file(
+                            File(_imageFile!.path),
+                            height: 200,
+                            fit: BoxFit.cover,
+                          ),
                   )
                 : _book!.coverUrl.isNotEmpty
                     ? ClipRRect(
@@ -214,11 +264,47 @@ class _EditBookScreenState extends State<EditBookScreen> {
                           'condition': condition,
                         };
                         await booksProv.updateBook(_book!.id, updates);
-                        if (_file != null) {
-                          final url =
-                              await storage.uploadBookCover(_book!.id, _file!);
-                          await booksProv.updateBook(
-                              _book!.id, {'coverUrl': url});
+                        if (_imageFile != null) {
+                          try {
+                            print('Starting image upload for book: ${_book!.id}');
+                            final url = await storage.uploadBookCover(
+                                _book!.id, _imageFile!);
+                            print('Image uploaded successfully. URL: $url');
+                            
+                            if (url.isEmpty) {
+                              throw Exception('Upload succeeded but URL is empty');
+                            }
+                            
+                            print('Updating book with cover URL: $url');
+                            await booksProv.updateBook(
+                                _book!.id, {'coverUrl': url});
+                            print('Book updated successfully with cover URL');
+                            
+                            // Small delay to ensure Firestore has processed the update
+                            await Future.delayed(Duration(milliseconds: 300));
+                          } catch (uploadError) {
+                            // Book was updated but image upload failed
+                            print('Image upload/update failed: $uploadError');
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Row(
+                                    children: [
+                                      Icon(Icons.warning, color: Colors.white),
+                                      SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          'Book updated but image upload failed: ${uploadError.toString()}',
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  backgroundColor: Colors.orange,
+                                  duration: Duration(seconds: 5),
+                                ),
+                              );
+                            }
+                          }
                         }
                         if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(

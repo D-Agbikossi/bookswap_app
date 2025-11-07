@@ -23,7 +23,16 @@ class FirestoreService {
   }
 
   Future<void> updateBook(String id, Map<String, dynamic> data) async {
-    await _db.collection('books').doc(id).update(data);
+    try {
+      await _db.collection('books').doc(id).update(data);
+      // Verify the update was successful
+      final doc = await _db.collection('books').doc(id).get();
+      if (!doc.exists) {
+        throw Exception('Book document does not exist');
+      }
+    } catch (e) {
+      throw Exception('Failed to update book: ${e.toString()}');
+    }
   }
 
   Future<void> deleteBook(String id) async {
